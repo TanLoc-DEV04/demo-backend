@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpException, HttpStatus, NotFoundException, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpException, HttpStatus, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { EntityRepository, QueryOrder, wrap, EntityManager } from '@mikro-orm/postgresql';
 import { InjectRepository } from '@mikro-orm/nestjs';
@@ -8,9 +8,10 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 
 @Controller('user')
+@ApiTags('users')
 export class UserController {
   constructor(
-    @InjectRepository(User) private readonly UserRepository: EntityRepository<User>,
+    @InjectRepository(User) private readonly userRepository: EntityRepository<User>,
     private readonly em: EntityManager,
   ) { }
 
@@ -18,8 +19,7 @@ export class UserController {
   @ApiOperation({ summary: 'List up to 20 users' })
   @ApiResponse({ status: 200, description: 'Found users', type: [UserResponseDto] })
   async find() {
-    const users = await this.UserRepository.findAll({
-      populate: ['name', 'age'],
+    const users = await this.userRepository.findAll({
       orderBy: { name: QueryOrder.DESC },
       limit: 20,
     });
@@ -31,9 +31,7 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'The found user', type: UserResponseDto })
   @ApiResponse({ status: 404, description: 'User not found' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
-    const user = await this.UserRepository.findOne(id, {
-      populate: ['name', 'age'],
-    });
+    const user = await this.userRepository.findOne(id);
     if (!user) {
       throw new HttpException(`User with ID ${id} not found`, HttpStatus.NOT_FOUND);
     }
@@ -45,8 +43,8 @@ export class UserController {
   @ApiResponse({ status: 201, description: 'User created successfully', type: UserResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid input' })
   async create(@Body() createUserDto: CreateUserDto) {
-    const user = this.UserRepository.create(createUserDto);
-    await this.em.flush();
+    const user = this.userRepository.create(createUserDto);
+    await this.em.persistAndFlush(user);
 
     return new UserResponseDto(user);
   }
@@ -57,7 +55,7 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 400, description: 'Invalid input' })
   async update(@Param('id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
-    const user = await this.UserRepository.findOne(id);
+    const user = await this.userRepository.findOne(id);
     if (!user) {
       throw new HttpException(`User with ID ${id} not found`, HttpStatus.NOT_FOUND);
     }
@@ -73,7 +71,7 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'User not found' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@Param('id', ParseIntPipe) id: number) {
-    const user = await this.UserRepository.findOne(id, { populate: [] });
+    const user = await this.userRepository.findOne(id);
     if (!user) {
       throw new HttpException(`User with ID ${id} not found`, HttpStatus.NOT_FOUND);
     }

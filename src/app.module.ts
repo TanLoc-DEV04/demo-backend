@@ -4,9 +4,10 @@ import { AppService } from './app.service';
 import { OrmModule } from './modules/orm.module';
 import { UserController } from './modules/user/user.controller';
 import { UserModule } from './modules/user/user.module';
+import { ProductModule } from './modules/product/product.module';
 
 @Module({
-  imports: [OrmModule, UserModule],
+  imports: [OrmModule, UserModule, ProductModule],
   controllers: [AppController, UserController],
   providers: [AppService, Logger],
 })
